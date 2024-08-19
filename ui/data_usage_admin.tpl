@@ -38,8 +38,8 @@
                     <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Input</th>
-                        <th>Output</th>
+                        <th>Download</th>
+                        <th>Upload</th>
                         <th>Total</th>
                         <th>Status</th>
                         <th>Date</th>
@@ -49,8 +49,8 @@
                     {foreach $data as $row}
                         <tr>
                             <td>{$row.username}</td>
-                            <td>{$row.acctInputOctets}</td>
-                            <td>{$row.acctOutputOctets}</td>
+                            <td>{$row.total_input}</td>
+                            <td>{$row.total_output}</td>
                             <td>{$row.totalBytes}</td>
                             <td>{$row.status}</td>
                             <td>{$row.dateAdded}</td>
