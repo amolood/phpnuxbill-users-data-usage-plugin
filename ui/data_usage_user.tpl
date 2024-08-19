@@ -33,10 +33,11 @@
                 <table id="datatable" class="table table-bordered table-striped">
                     <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Download (MB)</th>
-                        <th>Upload (MB)</th>
-                        <th>Total (MB)</th>
+                        <th>IP Address</th>
+                        <th>MAC Address</th>
+                        <th>Download</th>
+                        <th>Upload</th>
+                        <th>Total</th>
                         <th>Status</th>
                         <th>Date</th>
                     </tr>
@@ -44,9 +45,10 @@
                     <tbody>
                     {foreach $data as $row}
                         <tr>
-                            <td>{$row.id}</td>
-                            <td>{$row.acctInputOctets}</td>
-                            <td>{$row.acctOutputOctets}</td>
+                            <td>{$row.ip_address}</td>
+                            <td>{$row.mac_address}</td>
+                            <td>{$row.acctoutputoctets}</td>
+                            <td>{$row.acctinputoctets}</td>
                             <td>{$row.totalBytes}</td>
                             <td>{$row.status}</td>
                             <td>{$row.dateAdded}</td>
