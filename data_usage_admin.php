@@ -26,25 +26,42 @@ function UserDataUsageAdmin()
 
 function fetch_user_in_out_data_admin($search = '', $page = 1, $perPage = 10)
 {
-    $query = ORM::for_table('rad_acct')->whereNotEqual('acctoutputoctets', 0);
+    $query = ORM::for_table('radacct')
+        ->select('username')
+        ->select_expr('SUM(AcctOutputOctets)', 'total_input')
+        ->select_expr('SUM(AcctInputOctets)', 'total_output')
+        ->group_by('username');
+
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
     }
 
     $query->limit($perPage)->offset(($page - 1) * $perPage);
-    $data = Paginator::findMany($query, [], $perPage);
+    $data = $query->find_many();
 
-    foreach ($data as &$row) {
-        $row->acctOutputOctets = convert_bytes_admin(floatval($row->acctoutputoctets));
-        $row->acctInputOctets = convert_bytes_admin(floatval($row->acctinputoctets));
-        $row->totalBytes = convert_bytes_admin(floatval($row->acctoutputoctets)+ floatval($row->acctunputoctets));
 
-        $lastRecord = ORM::for_table('rad_acct')
-            ->where('username', $row->username)->whereNotEqual('acctoutputoctets', 0)
-            ->order_by_desc('acctstatustype')
+        foreach ($data as &$row) {
+        // Save raw byte values for further calculations
+        $row->total_output_bytes = $row->total_output;
+        $row->total_input_bytes = $row->total_input;
+
+        // Convert output and input bytes to human-readable format
+        $row->total_output = convert_bytes_admin($row->total_output);
+        $row->total_input = convert_bytes_admin($row->total_input);
+        
+        // Calculate total bytes in bytes
+        $totalBytes = $row->total_output_bytes + $row->total_input_bytes;
+
+        // Convert total bytes to human-readable format
+        $row->totalBytes = convert_bytes_admin($totalBytes);
+
+        // Check connection status
+        $lastRecord = ORM::for_table('radacct')
+            ->where('username', $row->username)
+            ->order_by_desc('AcctStartTime')
             ->find_one();
 
-        if ($lastRecord && $lastRecord->acctstatustype == 'Start') {
+        if ($lastRecord && $lastRecord->AcctStopTime == null) {
             $row->status = '<span class="badge btn-success">Connected</span>';
         } else {
             $row->status = '<span class="badge btn-danger">Disconnected</span>';
@@ -54,13 +71,14 @@ function fetch_user_in_out_data_admin($search = '', $page = 1, $perPage = 10)
     return $data;
 }
 
+
 function count_user_in_out_data_admin($search = '')
 {
-    $query = ORM::for_table('rad_acct');
+    $query = ORM::for_table('radacct');
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
     }
-    return $query->count();
+    return $query->group_by('username')->count();
 }
 
 function create_pagination_admin($page, $perPage, $total)
