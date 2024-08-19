@@ -23,41 +23,44 @@ function UserDataUsage()
     $ui->display('data_usage_user.tpl');
 }
 
-function fetch_user_in_out_data($search = '', $page = 1, $perPage = 10)
+function fetch_user_in_out_data($search = '', $page = 1, $perPage = 10000)
 {
-    $query = ORM::for_table('rad_acct');
-    $query->where_not_equal('acctoutputoctets', 0.00);
-    if ($search) {
-        $query->where_like('username', '%' . $search . '%');
-    }
+    // Calculate the start and end date for the current month
+    $start_date = date('Y-m-01');
+    $end_date = date('Y-m-t');
 
-    $query->limit($perPage)->offset(($page - 1) * $perPage);
-    $data = Paginator::findMany($query, [], $perPage);
+    // Fetch data usage from radacct table
+    $query = ORM::for_table('radacct')
+        ->select('radacctid', 'id')
+        ->select_expr('AcctOutputOctets', 'Download')  // Corrected: AcctOutputOctets corresponds to Download
+        ->select_expr('AcctInputOctets', 'Upload') // Corrected: AcctInputOctets corresponds to Upload
+        ->select_expr('AcctStartTime', 'StartTime')
+        ->select_expr('AcctStopTime', 'StopTime')
+        ->select('CallingStationId', 'mac_address')  // MAC Address from callingstationid
+        ->select('FramedIPAddress', 'ip_address')   // IP Address from framedipaddress
+        ->where_raw("(DATE(AcctStartTime) BETWEEN ? AND ?)", [$start_date, $end_date])
+        ->where('username', $search)
+        ->order_by_desc('AcctStartTime')
+        ->limit($perPage)
+        ->offset(($page - 1) * $perPage)
+        ->find_many();
 
-    foreach ($data as &$row) {
-        $row->acctOutputOctets = convert_bytes($row->acctoutputoctets);
-        $row->acctInputOctets = convert_bytes($row->acctinputoctets);
-        $row->totalBytes = convert_bytes($row->acctoutputoctets + $row->acctinputoctets);
+    // Prepare the data array
+    $data = [];
+    foreach ($query as $row) {
+        $download = $row->Download ? convert_bytes($row->Download) : '0 MB'; // Download data
+        $upload = $row->Upload ? convert_bytes($row->Upload) : '0 MB';      // Upload data
 
-        if (isMysqlRadius()) {
-            $lastRecord = ORM::for_table('radacct')
-                ->where('username', $row->username)
-                ->where_not_equal('acctoutputoctets', 0)
-                ->order_by_desc('acctstoptime')
-                ->find_one();
-        } else {
-            $lastRecord = ORM::for_table('rad_acct')
-                ->where('username', $row->username)
-                ->where_not_equal('acctoutputoctets', 0)
-                ->order_by_desc('acctstatustype')
-                ->find_one();
-        }
-
-        if ($lastRecord && $lastRecord->acctstatustype == 'Start') {
-            $row->status = '<span class="badge btn-success">Connected</span>';
-        } else {
-            $row->status = '<span class="badge btn-danger">Disconnected</span>';
-        }
+        $row_data = [
+            'mac_address' => $row->mac_address, // MAC Address
+            'ip_address' => $row->ip_address,   // IP Address
+            'acctoutputoctets' => $download,      // Download Data
+            'acctinputoctets' => $upload,     // Upload Data
+            'totalBytes' => convert_bytes($row->Download + $row->Upload),
+            'dateAdded' => format_date_time($row->StartTime),
+            'status' => determine_user_status($row->username),
+        ];
+        $data[] = $row_data;
     }
 
     return $data;
@@ -65,10 +68,14 @@ function fetch_user_in_out_data($search = '', $page = 1, $perPage = 10)
 
 function count_user_in_out_data($search = '')
 {
-    $query = ORM::for_table('rad_acct')->where_not_equal('acctoutputoctets', 0.00);
-    if ($search) {
-        $query->where_like('username', '%' . $search . '%');
-    }
+    // Calculate the start and end date for the current month
+    $start_date = date('Y-m-01');
+    $end_date = date('Y-m-t');
+
+    $query = ORM::for_table('radacct')
+        ->where_raw("(DATE(AcctStartTime) BETWEEN ? AND ?)", [$start_date, $end_date])
+        ->where('username', $search);
+
     return $query->count();
 }
 
@@ -84,26 +91,40 @@ function create_pagination($page, $perPage, $total)
     return $pagination;
 }
 
-function convert_bytes($bytes, $format = false)
+function convert_bytes($bytes)
 {
     if ($bytes >= 1073741824) {
-        $value = $bytes / 1073741824;
-        $unit = 'GB';
+        $bytes = number_format($bytes / 1073741824, 2) . ' GB';
     } elseif ($bytes >= 1048576) {
-        $value = $bytes / 1048576;
-        $unit = 'MB';
+        $bytes = number_format($bytes / 1048576, 2) . ' MB';
     } elseif ($bytes >= 1024) {
-        $value = $bytes / 1024;
-        $unit = 'KB';
+        $bytes = number_format($bytes / 1024, 2) . ' KB';
+    } elseif ($bytes > 1) {
+        $bytes = $bytes . ' bytes';
+    } elseif ($bytes == 1) {
+        $bytes = $bytes . ' byte';
     } else {
-        $value = $bytes;
-        $unit = 'bytes';
+        $bytes = '0 bytes';
     }
 
-    if ($format) {
-        return number_format($value, 2) . ' ' . $unit;
-    } else {
-        return number_format($value, 2); // Return numeric value only
-    }
+    return $bytes;
 }
 
+function format_date_time($datetime)
+{
+    return date('Y-m-d H:i:s', strtotime($datetime));
+}
+
+function determine_user_status($username)
+{
+    $lastRecord = ORM::for_table('radacct')
+        ->where('username', $username)
+        ->order_by_desc('AcctStopTime')
+        ->find_one();
+
+    if ($lastRecord && $lastRecord->AcctStopTime == 'Start') {
+        return '<span class="badge btn-success">Connected</span>';
+    } else {
+        return '<span class="badge btn-danger">Disconnected</span>';
+    }
+}
