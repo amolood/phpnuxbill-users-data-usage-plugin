@@ -1,13 +1,13 @@
-{include file="user-ui/user-header.tpl"}
+{include file="customer/header.tpl"}
 
 <div class="row">
     <div class="col-sm-6">
         <div class="panel panel-hovered mb20 panel-primary">
             <div class="panel-heading">
-                Daily Total Data Usage
+                Session Total Data Usage
             </div>
             <div class="table-responsive">
-                <canvas class="center-block" height="600" width="800" id="dailyTotalChart"></canvas>
+                <canvas class="center-block" height="600" width="800" id="sessionTotalChart"></canvas>
             </div>
         </div>
     </div>
@@ -49,13 +49,13 @@
                             <td>{$row.acctOutputOctets}</td>
                             <td>{$row.totalBytes}</td>
                             <td>{$row.status}</td>
-                            <td>{$row.dateAdded}</td>
+                            <td>{$row.sdate}</td>
                         </tr>
                     {/foreach}
                     </tbody>
                 </table>
             </div>
-            {include file="pagination.tpl"}
+            
         </div>
     </div>
 </div>
@@ -63,7 +63,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="text/javascript">
     var chartData = {
-        labels: [{foreach $data as $row} "{$row.dateAdded}", {/foreach}],
+        labels: [{foreach $data as $row} "{$row.sdate}", {/foreach}],
         datasets: [
             {
                 label: 'Download (MB)',
@@ -103,8 +103,8 @@
         }
     });
 
-    var dailyTotalData = {
-        labels: [{foreach $data as $row} "{$row.dateAdded}", {/foreach}],
+    var sessionTotalData = {
+        labels: [{foreach $data as $row} "{$row.sdate}", {/foreach}],
         datasets: [
             {
                 label: 'Total Data (MB)',
@@ -116,10 +116,10 @@
         ]
     };
 
-    var ctxDaily = document.getElementById('dailyTotalChart').getContext('2d');
-    var dailyTotalChart = new Chart(ctxDaily, {
+    var ctxsession = document.getElementById('sessionTotalChart').getContext('2d');
+    var sessionTotalChart = new Chart(ctxsession, {
         type: 'bar',
-        data: dailyTotalData,
+        data: sessionTotalData,
         options: {
             responsive: false,
             scales: {
@@ -138,4 +138,4 @@
     });
 </script>
 
-{include file="user-ui/user-footer.tpl"}
+{include file="customer/footer.tpl"}

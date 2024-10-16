@@ -53,7 +53,7 @@
                             <td>{$row.acctOutputOctets}</td>
                             <td>{$row.totalBytes}</td>
                             <td>{$row.status}</td>
-                            <td>{$row.dateAdded}</td>
+                            <td>{$row.sdate}</td>
                         </tr>
                     {/foreach}
                     </tbody>
@@ -68,6 +68,7 @@
 <script>
     window.addEventListener('DOMContentLoaded', function() {
         var amolood = "https://github.com/amolood";
-        $('#version').html('Plugin by: <a href="' + amolood + '">Amolood</a>');
+		var gerandonk = "https://github.com/gerandonk";
+        $('#version').html('Plugin by: <a href="' + amolood + '">Amolood</a> Mods by: <a href="' + gerandonk + '">Gerandonk</a>');
     });
 </script>

@@ -5,17 +5,21 @@ register_menu("User Data Usage", false, "UserDataUsage", 'AFTER_DASHBOARD', 'fa 
 function UserDataUsage()
 {
     global $ui;
-    $ui->assign('_title', 'DataUsage');
+    $ui->assign('_title', 'User Data Usage');
     $ui->assign('_system_menu', '');
     $user = User::_info();
     $ui->assign('_user', $user);
     $search = $user['username'];
     $page = !isset($_GET['page']) ? 1 : (int)$_GET['page'];
     $perPage = 10;
+	
+	if ($total === null) {
+        r2(U . "home", 'e', 'Unable to retrieve the records from database');
+    }
 
-    $data = fetch_user_in_out_data($search, $page, $perPage);
-    $total = count_user_in_out_data($search);
-    $pagination = create_pagination($page, $perPage, $total);
+    $data = UserDataUsage_fetch_user_in_out_data($search, $page, $perPage);
+    $total = UserDataUsage_count_user_in_out_data($search);
+    $pagination = UserDataUsage_create_pagination($page, $perPage, $total);
 
     $ui->assign('q', $search);
     $ui->assign('data', $data);
@@ -23,60 +27,69 @@ function UserDataUsage()
     $ui->display('data_usage_user.tpl');
 }
 
-function fetch_user_in_out_data($search = '', $page = 1, $perPage = 10)
+function UserDataUsage_fetch_user_in_out_data($search = '', $page = 1, $perPage = 10)
 {
-    if(isTableExist('rad_acct')){
-    $query = ORM::for_table('rad_acct');
-    }else{
-        $query = ORM::for_table('radacct');
-    }
-    $query->where_not_equal('acctoutputoctets', 0.00);
+    // Check for the existence of the table and initialize query accordingly
+    $table = isTableExist('rad_acct') ? 'rad_acct' : 'radacct';
+    $query = ORM::for_table($table)->where_not_equal('acctoutputoctets', 0);
+
+    // Handle search functionality
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
     }
 
+    // Apply pagination limits
     $query->limit($perPage)->offset(($page - 1) * $perPage);
     $data = Paginator::findMany($query, [], $perPage);
 
+    // Processing each record
     foreach ($data as &$row) {
-        $row->acctOutputOctets = convert_bytes($row->acctoutputoctets);
-        $row->acctInputOctets = convert_bytes($row->acctinputoctets);
-        $row->totalBytes = convert_bytes($row->acctoutputoctets + $row->acctinputoctets);
+        // Converting octet values into readable formats
+        $row->acctOutputOctets = UserDataUsage_convert_bytes(floatval($row->acctoutputoctets));
+        $row->acctInputOctets = UserDataUsage_convert_bytes(floatval($row->acctinputoctets));
+        $row->totalBytes = UserDataUsage_convert_bytes(floatval($row->acctoutputoctets) + floatval($row->acctinputoctets));
 
-        if (isTableExist('radacct')) {
-            $lastRecord = ORM::for_table('radacct')
-                ->where('username', $row->username)
-                ->where_not_equal('acctoutputoctets', 0)
-                ->order_by_desc('acctstoptime')
-                ->find_one();
-        } elseif(isTableExist('rad_acct')) {
-            $lastRecord = ORM::for_table('rad_acct')
-                ->where('username', $row->username)
-                ->where_not_equal('acctoutputoctets', 0)
-                ->order_by_desc('acctstatustype')
-                ->find_one();
-        }
+        // Fetch the last record for status determination
+        $lastRecord = ORM::for_table($table)
+            ->where('username', $row->username)
+            ->where_not_equal('acctoutputoctets', 0)
+            ->order_by_desc($table === 'rad_acct' ? 'acctstatustype' : 'acctstoptime')
+            ->find_one();
 
-        if ($lastRecord && $lastRecord->acctstatustype == 'Start') {
+        // Set connection status based on the last record's type
+        if ($lastRecord && ($lastRecord->acctstatustype === 'Start' || $lastRecord->acctstoptime === null)) {
             $row->status = '<span class="badge btn-success">Connected</span>';
         } else {
             $row->status = '<span class="badge btn-danger">Disconnected</span>';
         }
+		$row->sdate = isset($lastRecord['dateAdded']) ? $lastRecord['dateAdded'] : $lastRecord['acctstarttime'];
     }
 
     return $data;
 }
 
-function count_user_in_out_data($search = '')
+function UserDataUsage_count_user_in_out_data($search = '')
 {
-    $query = ORM::for_table('rad_acct')->where_not_equal('acctoutputoctets', 0.00);
+    // Check for the existence of the tables and initialize query accordingly
+    $tables = ['rad_acct', 'radacct']; // Add more table names here if needed
+    $query = null;
+    foreach ($tables as $table) {
+        if (isTableExist($table)) {
+            $query = ORM::for_table($table)->where_not_equal('acctoutputoctets', 0.00);
+            break;
+        }
+    }
+
+    // Apply search filter if applicable
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
     }
+
+    // Return the total count of records
     return $query->count();
 }
 
-function create_pagination($page, $perPage, $total)
+function UserDataUsage_create_pagination($page, $perPage, $total)
 {
     $pages = ceil($total / $perPage);
     $pagination = [
@@ -88,7 +101,7 @@ function create_pagination($page, $perPage, $total)
     return $pagination;
 }
 
-function convert_bytes($bytes, $format = false)
+function UserDataUsage_convert_bytes($bytes, $format = false)
 {
     if ($bytes >= 1073741824) {
         $value = $bytes / 1073741824;
