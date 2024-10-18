@@ -13,13 +13,15 @@ function UserDataUsageAdmin()
     $search = $_POST['q'] ?? '';
     $page = !isset($_GET['page']) ? 1 : (int)$_GET['page'];
     $perPage = 10;
-	
-	if ($total === null) {
-        r2(U . "dashboard", 'e', 'Unable to retrieve the records from database');
+
+    $total = UserDataUsageAdmin_count_user_in_out_data_admin($search);
+
+    if (is_string($total)) {
+        r2(U . "dashboard", 'e', $total);
+        return;
     }
 
     $data = UserDataUsageAdmin_fetch_user_in_out_data_admin($search, $page, $perPage);
-    $total = UserDataUsageAdmin_count_user_in_out_data_admin($search);
     $pagination = UserDataUsageAdmin_create_pagination_admin($page, $perPage, $total);
 
     $ui->assign('q', $search);
@@ -27,6 +29,7 @@ function UserDataUsageAdmin()
     $ui->assign('pagination', $pagination);
     $ui->display('data_usage_admin.tpl');
 }
+
 
 function UserDataUsageAdmin_fetch_user_in_out_data_admin($search = '', $page = 1, $perPage = 10)
 {
@@ -86,6 +89,11 @@ function UserDataUsageAdmin_count_user_in_out_data_admin($search = '')
         }
     }
 
+    // If no table exists, return an error message
+    if ($query === null) {
+        return "Error: No valid table found in the database.";
+    }
+
     // Apply search filter if applicable
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
@@ -93,7 +101,7 @@ function UserDataUsageAdmin_count_user_in_out_data_admin($search = '')
 
     // Return the total count of records
     $count = $query->count();
-    if ($count === null) {
+    if ($count === false) {
         return "Error: Unable to retrieve the count of records.";
     }
     return $count;
