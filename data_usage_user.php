@@ -13,12 +13,14 @@ function UserDataUsage()
     $page = !isset($_GET['page']) ? 1 : (int)$_GET['page'];
     $perPage = 10;
 	
-	if ($total === null) {
-        r2(U . "home", 'e', 'Unable to retrieve the records from database');
+	$total = UserDataUsage_count_user_in_out_data($search);
+
+    if (is_string($total)) {
+        r2(U . "home", 'e', $total);
+        return;
     }
 
     $data = UserDataUsage_fetch_user_in_out_data($search, $page, $perPage);
-    $total = UserDataUsage_count_user_in_out_data($search);
     $pagination = UserDataUsage_create_pagination($page, $perPage, $total);
 
     $ui->assign('q', $search);
@@ -80,13 +82,22 @@ function UserDataUsage_count_user_in_out_data($search = '')
         }
     }
 
+    // If no table exists, return an error message
+    if ($query === null) {
+        return "Error: No valid table found in the database.";
+    }
+
     // Apply search filter if applicable
     if ($search) {
         $query->where_like('username', '%' . $search . '%');
     }
 
     // Return the total count of records
-    return $query->count();
+    $count = $query->count();
+    if ($count === false) {
+        return "Error: Unable to retrieve the count of records.";
+    }
+    return $count;
 }
 
 function UserDataUsage_create_pagination($page, $perPage, $total)
