@@ -1,0 +1,33 @@
+User Data Usage Plugin for PHPNuxBill
+=====================================
+
+AUTOMATIC INSTALLATION (recommended)
+------------------------------------
+1. In the PHPNuxBill admin dashboard open the Plugin Manager:
+   https://your-domain/index.php?_route=pluginmanager
+2. Paste the repository URL into the install field:
+   https://github.com/amolood/phpnuxbill-users-data-usage-plugin
+3. Click Install.
+
+MANUAL INSTALLATION
+-------------------
+Copy the contents of the plugin/ folder into your PHPNuxBill installation:
+
+   plugin/data_usage_admin.php      ->  system/plugin/data_usage_admin.php
+   plugin/data_usage_user.php       ->  system/plugin/data_usage_user.php
+   plugin/ui/data_usage_admin.tpl   ->  system/plugin/ui/data_usage_admin.tpl
+   plugin/ui/data_usage_user.tpl    ->  system/plugin/ui/data_usage_user.tpl
+
+No database changes are required.
+
+REQUIREMENTS
+------------
+- PHPNuxBill (latest recommended)
+- PHP 8.2 or higher
+- MySQL / MariaDB
+- FreeRADIUS enabled in PHPNuxBill (Settings -> Radius)
+
+USAGE
+-----
+- Admin:    Services -> User Data Usage
+- Customer: "User Data Usage" entry in the customer dashboard menu

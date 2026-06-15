@@ -1,0 +1,20 @@
+Changelog - User Data Usage Plugin for PHPNuxBill
+=================================================
+
+2.0.0
+-----
+- Support both FreeRADIUS backends (REST rad_acct and SQL radacct) with
+  automatic detection and column verification.
+- Add per-user aggregated summary with quota progress bars.
+- Add summary stat cards, daily usage trend charts, and CSV export.
+- Add username, date-range, and status filters with pagination on all views.
+- Fix download/upload labelling, connection-status logic, output escaping,
+  and pagination.
+- Route all interface strings through the translation system.
+- Read-only: the plugin makes no schema or data changes.
+- Restructure repository to the standard plugin/ package layout.
+
+1.0.0
+-----
+- Initial release: per-session user data usage log with username search
+  and pagination.

@@ -45,13 +45,13 @@ A data-usage analytics plugin for [PHPNuxBill](https://github.com/hotspotbilling
 
 ### Option 2 — Manual installation
 
-Copy the files into your PHPNuxBill installation:
+Copy the contents of the `plugin/` folder into your PHPNuxBill installation:
 
 ```
-data_usage_admin.php   →  system/plugin/data_usage_admin.php
-data_usage_user.php    →  system/plugin/data_usage_user.php
-ui/data_usage_admin.tpl →  system/plugin/ui/data_usage_admin.tpl
-ui/data_usage_user.tpl  →  system/plugin/ui/data_usage_user.tpl
+plugin/data_usage_admin.php     →  system/plugin/data_usage_admin.php
+plugin/data_usage_user.php      →  system/plugin/data_usage_user.php
+plugin/ui/data_usage_admin.tpl  →  system/plugin/ui/data_usage_admin.tpl
+plugin/ui/data_usage_user.tpl   →  system/plugin/ui/data_usage_user.tpl
 ```
 
 No database changes are required.

@@ -1,0 +1,4 @@
+User Data Usage Plugin for PHPNuxBill
+
+Licensed under the GNU General Public License v3.0 (GPL-3.0).
+See the LICENSE file in this repository for the full license text.
