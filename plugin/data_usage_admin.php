@@ -16,7 +16,20 @@
  * data_usage_user.php (both files are auto-included at boot).
  */
 
+define('USER_DATA_USAGE_VERSION', '2.1.0');
+
 register_menu("User Data Usage", true, "UserDataUsageAdmin", 'SERVICES', 'fa fa-bar-chart');
+
+/** Plugin metadata (name, version, author). */
+function UserDataUsage_about()
+{
+    return [
+        'name'    => 'User Data Usage',
+        'version' => USER_DATA_USAGE_VERSION,
+        'author'  => 'amolood',
+        'url'     => 'https://github.com/amolood/phpnuxbill-users-data-usage-plugin',
+    ];
+}
 
 /* ------------------------------------------------------------------ *
  *  Backend detection & shared helpers
@@ -227,6 +240,32 @@ function UserDataUsage_quotaMap($usernames)
     return $map;
 }
 
+/** Top N data consumers for the current filter set (for the summary card). */
+function UserDataUsage_topConsumers($schema, $filters, $limit = 5)
+{
+    $rows = UserDataUsage_query($schema, $filters)
+        ->select_expr('username', 'username')
+        ->select_expr('SUM(COALESCE(acctinputoctets,0)) + SUM(COALESCE(acctoutputoctets,0))', 'total_bytes')
+        ->group_by('username')
+        ->order_by_expr('SUM(COALESCE(acctoutputoctets,0)) + SUM(COALESCE(acctinputoctets,0)) DESC')
+        ->limit($limit)
+        ->find_array();
+
+    $out = [];
+    $max = 0;
+    foreach ($rows as $r) {
+        $b = floatval($r['total_bytes']);
+        if ($b > $max) $max = $b;
+        $out[] = ['username' => $r['username'], 'total' => UserDataUsage_human($b), 'bytes' => $b];
+    }
+    // relative bar width for the card
+    foreach ($out as &$o) {
+        $o['pct'] = $max > 0 ? round($o['bytes'] / $max * 100) : 0;
+    }
+    unset($o);
+    return $out;
+}
+
 /** Grand totals across the current filter set, for the stat cards. */
 function UserDataUsage_summary($schema, $filters)
 {
@@ -257,28 +296,55 @@ function UserDataUsage_summary($schema, $filters)
 }
 
 /**
- * Daily usage trend (download/upload MB per day) for the current filter set.
- * Optionally scoped to a single username (customer view).
+ * Map a requested period to a SQL grouping expression + how many points to keep.
+ * @return array ['expr'=>string, 'points'=>int]
+ */
+function UserDataUsage_periodGroup($period, $dateCol)
+{
+    switch ($period) {
+        case 'weekly':
+            // ISO-style year-week label, e.g. 2026-W24
+            return ['expr' => "DATE_FORMAT($dateCol, '%x-W%v')", 'points' => 26];
+        case 'monthly':
+            return ['expr' => "DATE_FORMAT($dateCol, '%Y-%m')", 'points' => 24];
+        case 'daily':
+        default:
+            return ['expr' => "DATE($dateCol)", 'points' => 30];
+    }
+}
+
+/** Validate/normalise a requested period. */
+function UserDataUsage_period($default = 'daily')
+{
+    $p = _req('period', $default);
+    return in_array($p, ['daily', 'weekly', 'monthly']) ? $p : $default;
+}
+
+/**
+ * Usage trend (download/upload MB per period) for the current filter set.
+ * $period: daily | weekly | monthly. Optionally scoped to a single username.
  * @return array ['labels'=>[], 'download'=>[], 'upload'=>[]]
  */
-function UserDataUsage_trend($schema, $filters, $usernameExact = null, $days = 30)
+function UserDataUsage_trend($schema, $filters, $usernameExact = null, $period = 'daily')
 {
     $df = $schema['date'];
+    $grp = UserDataUsage_periodGroup($period, $df);
+
     $f = $filters;
     if ($usernameExact !== null) {
         $f['username_exact'] = $usernameExact;
     }
     $rows = UserDataUsage_query($schema, $f)
-        ->select_expr("DATE($df)", 'd')
+        ->select_expr($grp['expr'], 'd')
         ->select_expr('SUM(COALESCE(acctinputoctets,0))', 'in_sum')
         ->select_expr('SUM(COALESCE(acctoutputoctets,0))', 'out_sum')
-        ->group_by_expr("DATE($df)")
-        ->order_by_expr("DATE($df) ASC")
+        ->group_by_expr($grp['expr'])
+        ->order_by_expr($grp['expr'] . ' ASC')
         ->find_array();
 
-    // keep the last $days points
-    if (count($rows) > $days) {
-        $rows = array_slice($rows, -$days);
+    // keep the most recent N points for the chosen period
+    if (count($rows) > $grp['points']) {
+        $rows = array_slice($rows, -$grp['points']);
     }
 
     $labels = $download = $upload = [];
@@ -329,11 +395,16 @@ function UserDataUsageAdmin()
     $ui->assign('stats', UserDataUsage_summary($schema, $filters));
     $ui->assign('mode', $schema['status_mode'] === 'statustype' ? 'REST (rad_acct)' : 'SQL (radacct)');
 
-    // Daily trend chart series
-    $trend = UserDataUsage_trend($schema, $filters);
+    // Usage trend chart series (daily / weekly / monthly)
+    $period = UserDataUsage_period('daily');
+    $ui->assign('period', $period);
+    $trend = UserDataUsage_trend($schema, $filters, null, $period);
     $ui->assign('trend_labels', json_encode($trend['labels']));
     $ui->assign('trend_download', json_encode($trend['download']));
     $ui->assign('trend_upload', json_encode($trend['upload']));
+
+    // Top consumers card
+    $ui->assign('topConsumers', UserDataUsage_topConsumers($schema, $filters, 5));
 
     if ($view === 'summary') {
         $ui->assign('summaryRows', UserDataUsage_perUser($schema, $filters, UserDataUsage_pagerArgs($filters, 'summary')));

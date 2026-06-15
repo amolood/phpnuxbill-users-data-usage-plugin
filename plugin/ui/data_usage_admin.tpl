@@ -37,9 +37,37 @@
 </div>
 
 <div class="panel panel-hovered mb20 panel-primary">
-    <div class="panel-heading">{Lang::T('Daily Usage Trend')}</div>
+    <div class="panel-heading">
+        {Lang::T('Usage Trend')}
+        <div class="btn-group btn-group-xs pull-right">
+            <a class="btn {if $period=='daily'}btn-primary{else}btn-default{/if}"
+               href="{$_url}UserDataUsageAdmin?view={$view}&period=daily&q={$q|escape}&from={$from|escape}&to={$to|escape}&status={$status|escape}">{Lang::T('Daily')}</a>
+            <a class="btn {if $period=='weekly'}btn-primary{else}btn-default{/if}"
+               href="{$_url}UserDataUsageAdmin?view={$view}&period=weekly&q={$q|escape}&from={$from|escape}&to={$to|escape}&status={$status|escape}">{Lang::T('Weekly')}</a>
+            <a class="btn {if $period=='monthly'}btn-primary{else}btn-default{/if}"
+               href="{$_url}UserDataUsageAdmin?view={$view}&period=monthly&q={$q|escape}&from={$from|escape}&to={$to|escape}&status={$status|escape}">{Lang::T('Monthly')}</a>
+        </div>
+    </div>
     <div class="panel-body"><canvas height="80" id="trendChart"></canvas></div>
 </div>
+
+{if $topConsumers}
+<div class="panel panel-hovered mb20 panel-info">
+    <div class="panel-heading">{Lang::T('Top Consumers')}</div>
+    <div class="panel-body">
+        {foreach $topConsumers as $tc}
+        <div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between">
+                <span><b>{$tc.username|escape}</b></span><span>{$tc.total}</span>
+            </div>
+            <div class="progress" style="margin-bottom:0;height:8px">
+                <div class="progress-bar progress-bar-info" style="width:{$tc.pct}%"></div>
+            </div>
+        </div>
+        {/foreach}
+    </div>
+</div>
+{/if}
 
 <div class="panel panel-hovered mb20 panel-primary">
     <div class="panel-heading">
@@ -137,7 +165,10 @@
 
 {include file="sections/footer.tpl"}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+{* Load Chart.js locally first (works on offline/firewalled hotspot servers),
+   fall back to CDN only if the local copy is missing. *}
+<script src="{$app_url}/system/plugin/ui/assets/chart.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"><\/script>');</script>
 <script type="text/javascript">
     (function () {
         var el = document.getElementById('trendChart');

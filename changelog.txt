@@ -1,6 +1,13 @@
 Changelog - User Data Usage Plugin for PHPNuxBill
 =================================================
 
+2.1.0
+-----
+- Add Daily / Weekly / Monthly usage-trend toggle.
+- Add a "Top Consumers" card to the admin view.
+- Bundle Chart.js locally (offline/firewalled-server safe) with CDN fallback.
+- Add a plugin version constant and metadata.
+
 2.0.0
 -----
 - Support both FreeRADIUS backends (REST rad_acct and SQL radacct) with

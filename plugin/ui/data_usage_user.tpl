@@ -84,7 +84,9 @@
     {include file="pagination.tpl"}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+{* Local Chart.js first (offline-safe), CDN fallback only if missing. *}
+<script src="{$app_url}/system/plugin/ui/assets/chart.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"><\/script>');</script>
 <script type="text/javascript">
     (function () {
         if (typeof Chart === 'undefined') return;

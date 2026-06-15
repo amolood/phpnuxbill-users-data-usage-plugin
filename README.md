@@ -10,7 +10,9 @@ A data-usage analytics plugin for [PHPNuxBill](https://github.com/hotspotbilling
 - **Per-user view** — aggregated download/upload/total per customer, sorted by usage, with quota progress bars.
 - **Sessions view** — detailed, paginated log of every accounting session.
 - **Quota tracking** — shows each user's plan data-limit vs. usage as a colour-coded progress bar (green / amber / red).
-- **Daily usage trend** — line chart of download/upload per day.
+- **Usage trends** — download/upload chart with **Daily / Weekly / Monthly** views.
+- **Top consumers** — at-a-glance ranking of the heaviest data users.
+- **Offline-ready charts** — Chart.js is bundled locally (with CDN fallback), so charts work even on hotspot servers with no internet access.
 - **Filtering** — by username, date range, and connection status (online / offline).
 - **CSV export** — export the current view for billing reconciliation or reporting.
 - **Customer self-service page** — each customer sees their own usage, quota, charts, and session history.
