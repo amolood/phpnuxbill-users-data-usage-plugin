@@ -41,19 +41,23 @@ function UserDataUsage()
         ->find_one();
     $in  = floatval($agg ? $agg->in_sum : 0);
     $out = floatval($agg ? $agg->out_sum : 0);
-    $summary = [
-        'username'    => $username,
-        'total_bytes' => $in + $out,
-        'sessions'    => intval($agg ? $agg->sessions : 0),
-    ];
-    UserDataUsage_attachQuota($summary);
+    $total = $in + $out;
+
+    // Quota for this customer via the shared batch lookup (one user here).
+    $quota = UserDataUsage_quotaMap([$username]);
+    $quotaStr = '';
+    $quotaPct = null;
+    if (isset($quota[$username]) && $quota[$username]['limit'] > 0) {
+        $quotaStr = UserDataUsage_human($quota[$username]['limit']);
+        $quotaPct = min(100, round($total / $quota[$username]['limit'] * 100, 1));
+    }
     $ui->assign('stats', [
-        'download' => UserDataUsage_human($out),
-        'upload'   => UserDataUsage_human($in),
-        'total'    => UserDataUsage_human($in + $out),
-        'sessions' => $summary['sessions'],
-        'quota'    => $summary['quota'],
-        'quota_pct' => $summary['quota_pct'],
+        'download'  => UserDataUsage_human($out),
+        'upload'    => UserDataUsage_human($in),
+        'total'     => UserDataUsage_human($total),
+        'sessions'  => intval($agg ? $agg->sessions : 0),
+        'quota'     => $quotaStr,
+        'quota_pct' => $quotaPct,
     ]);
 
     // Session list (newest first) + chart series in chronological order.
@@ -62,15 +66,17 @@ function UserDataUsage()
         [],
         20
     );
-    $rows = $rows ?: [];
+    $list = [];
     $i = 0;
-    foreach ($rows as $row) {
+    foreach (($rows ?: []) as $row) {
         UserDataUsage_decorate($row, $schema);
         $row->no = ++$i;
+        $list[] = $row;            // collect into a plain array (ResultSet -> array)
     }
-    $ui->assign('data', $rows);
+    $ui->assign('data', $list);
 
-    $chrono = array_reverse($rows);
+    // chart series in chronological order (oldest first)
+    $chrono = array_reverse($list);
     $labels = $download = $upload = $total = [];
     foreach ($chrono as $row) {
         $labels[]   = $row->sdate;

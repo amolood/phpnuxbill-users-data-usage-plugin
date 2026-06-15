@@ -80,7 +80,17 @@ No configuration is needed — the plugin verifies the required columns exist be
 
 ## Screenshots
 
-![Admin view](https://github.com/amolood/phpnuxbill-users-data-usage-plugin/blob/main/user.png)
+**Admin — Per-user summary** (stat cards, daily trend, quota bars)
+
+![Admin summary](screenshots/admin-summary.png)
+
+**Admin — Sessions view** (per-session log with connection status)
+
+![Admin sessions](screenshots/admin-sessions.png)
+
+**Customer — My usage** (personal stats, quota, charts, session history)
+
+![Customer view](screenshots/customer.png)
 
 ---
 
